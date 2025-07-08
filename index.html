@@ -258,30 +258,187 @@
             margin-bottom: 20px;
         }
 
+        .score-buttons {
+            display: flex;
+            gap: 5px;
+            margin-top: 10px;
+        }
+
+        .score-btn {
+            flex: 1;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+        }
+
+        .score-btn-add {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+        }
+
+        .score-btn-subtract {
+            background: linear-gradient(135deg, #f44336, #da190b);
+            color: white;
+        }
+
+        .score-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+        }
+
+        .score-btn:active {
+            transform: translateY(0);
+        }
+
+        .score-input input {
+            text-align: center;
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .negative-score {
+            color: #f44336;
+        }
+
+        .positive-score {
+            color: #4CAF50;
+        }
+
         @media (max-width: 768px) {
             .container {
-                margin: 10px;
+                margin: 5px;
                 border-radius: 15px;
             }
             
             .header {
-                padding: 20px;
+                padding: 15px;
             }
             
             .header h1 {
-                font-size: 2em;
+                font-size: 1.8em;
             }
             
             .main-content {
+                padding: 15px;
+            }
+            
+            .setup-section {
                 padding: 20px;
             }
             
             .players-grid {
                 grid-template-columns: 1fr;
+                gap: 15px;
+            }
+            
+            .player-card {
+                padding: 15px;
             }
             
             .controls {
                 flex-direction: column;
+                gap: 10px;
+            }
+            
+            .controls .btn {
+                width: 100%;
+                padding: 15px;
+                font-size: 16px;
+            }
+            
+            .score-input {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .score-input input {
+                width: 100%;
+                padding: 15px;
+                font-size: 18px;
+            }
+            
+            .score-buttons {
+                gap: 10px;
+            }
+            
+            .score-btn {
+                padding: 12px 15px;
+                font-size: 16px;
+            }
+            
+            .player-input {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .player-input input {
+                width: 100%;
+                padding: 15px;
+                font-size: 16px;
+            }
+            
+            .player-input .btn {
+                width: 100%;
+                padding: 15px;
+                font-size: 16px;
+            }
+            
+            .total-score {
+                font-size: 1.3em;
+                padding: 12px;
+            }
+            
+            .round-counter {
+                font-size: 1.2em;
+                padding: 12px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 5px;
+            }
+            
+            .container {
+                margin: 0;
+                border-radius: 10px;
+            }
+            
+            .header {
+                padding: 10px;
+            }
+            
+            .header h1 {
+                font-size: 1.5em;
+            }
+            
+            .header p {
+                font-size: 0.9em;
+            }
+            
+            .main-content {
+                padding: 10px;
+            }
+            
+            .setup-section {
+                padding: 15px;
+            }
+            
+            .player-card {
+                padding: 12px;
+            }
+            
+            .score-history {
+                max-height: 150px;
+                font-size: 14px;
+            }
+            
+            .total-score {
+                font-size: 1.2em;
             }
         }
     </style>
@@ -318,6 +475,7 @@
                     <button class="btn btn-primary" onclick="nextRound()">Ronde Berikutnya</button>
                     <button class="btn btn-warning" onclick="resetGame()">Reset Game</button>
                     <button class="btn btn-danger" onclick="endGame()">Akhiri Game</button>
+                    <button class="btn btn-danger" onclick="clearAllData()" style="background: linear-gradient(135deg, #9c27b0, #673ab7);">Hapus Semua Data</button>
                 </div>
             </div>
         </div>
@@ -327,6 +485,49 @@
         let players = [];
         let currentRound = 1;
         let gameActive = false;
+
+        // Load data from memory when page loads
+        window.addEventListener('load', function() {
+            loadGameData();
+        });
+
+        // Save data to memory
+        function saveGameData() {
+            const gameData = {
+                players: players,
+                currentRound: currentRound,
+                gameActive: gameActive
+            };
+            
+            // Store in a global variable that persists during the session
+            window.gameData = gameData;
+        }
+
+        // Load data from memory
+        function loadGameData() {
+            if (window.gameData) {
+                const data = window.gameData;
+                players = data.players || [];
+                currentRound = data.currentRound || 1;
+                gameActive = data.gameActive || false;
+                
+                // Update UI based on loaded data
+                if (players.length > 0) {
+                    updatePlayerList();
+                }
+                
+                if (gameActive) {
+                    document.getElementById('setupSection').style.display = 'none';
+                    document.getElementById('gameSection').style.display = 'block';
+                    updateGameDisplay();
+                }
+            }
+        }
+
+        // Auto-save every time data changes
+        function autoSave() {
+            saveGameData();
+        }
 
         function addPlayer() {
             const input = document.getElementById('playerNameInput');
@@ -355,6 +556,7 @@
             
             input.value = '';
             updatePlayerList();
+            autoSave();
         }
 
         function updatePlayerList() {
@@ -390,6 +592,7 @@
         function removePlayer(index) {
             players.splice(index, 1);
             updatePlayerList();
+            autoSave();
         }
 
         function startGame() {
@@ -403,6 +606,7 @@
             document.getElementById('gameSection').style.display = 'block';
             
             updateGameDisplay();
+            autoSave();
         }
 
         function updateGameDisplay() {
@@ -418,10 +622,12 @@
                 
                 let historyHTML = '';
                 player.scoreHistory.forEach((score, round) => {
+                    const scoreClass = score > 0 ? 'positive-score' : score < 0 ? 'negative-score' : '';
+                    const scoreText = score > 0 ? `+${score}` : score.toString();
                     historyHTML += `
                         <div class="score-item">
                             <span class="round">R${round + 1}</span>
-                            <span class="points">${score > 0 ? '+' : ''}${score}</span>
+                            <span class="points ${scoreClass}">${scoreText}</span>
                         </div>
                     `;
                 });
@@ -431,7 +637,10 @@
                     <div class="total-score">Total: ${player.totalScore}</div>
                     <div class="score-input">
                         <input type="number" id="scoreInput${index}" placeholder="Masukkan skor..." onkeypress="handleEnterKey(event, ${index})">
-                        <button class="btn btn-primary" onclick="addScore(${index})">Tambah</button>
+                    </div>
+                    <div class="score-buttons">
+                        <button class="score-btn score-btn-add" onclick="addScore(${index}, 'add')">+ Tambah Poin</button>
+                        <button class="score-btn score-btn-subtract" onclick="addScore(${index}, 'subtract')">- Kurangi Poin</button>
                     </div>
                     <div class="score-history">${historyHTML || '<p style="text-align: center; color: #666;">Belum ada skor</p>'}</div>
                 `;
@@ -442,17 +651,24 @@
 
         function handleEnterKey(event, playerIndex) {
             if (event.key === 'Enter') {
-                addScore(playerIndex);
+                addScore(playerIndex, 'add');
             }
         }
 
-        function addScore(playerIndex) {
+        function addScore(playerIndex, operation) {
             const input = document.getElementById(`scoreInput${playerIndex}`);
-            const score = parseInt(input.value) || 0;
+            let score = parseInt(input.value) || 0;
             
-            if (input.value === '') {
-                alert('Silakan masukkan skor!');
+            if (input.value === '' || score === 0) {
+                alert('Silakan masukkan skor yang valid!');
                 return;
+            }
+            
+            // Jika operasi subtract, ubah skor menjadi negatif
+            if (operation === 'subtract') {
+                score = Math.abs(score) * -1;
+            } else {
+                score = Math.abs(score);
             }
             
             players[playerIndex].scoreHistory.push(score);
@@ -461,6 +677,7 @@
             input.value = '';
             updateGameDisplay();
             checkWinner();
+            autoSave();
         }
 
         function checkWinner() {
@@ -473,12 +690,14 @@
                 winnerAnnouncement.textContent = `🎉 Selamat ${winner.name}! Anda menang dengan skor ${winner.totalScore}!`;
                 winnerAnnouncement.style.display = 'block';
                 gameActive = false;
+                autoSave();
             }
         }
 
         function nextRound() {
             currentRound++;
             updateGameDisplay();
+            autoSave();
         }
 
         function resetGame() {
@@ -491,6 +710,7 @@
                 gameActive = true;
                 document.getElementById('winnerAnnouncement').style.display = 'none';
                 updateGameDisplay();
+                autoSave();
             }
         }
 
@@ -502,10 +722,40 @@
             }
         }
 
+        // Clear all data function (optional)
+        function clearAllData() {
+            if (confirm('Apakah Anda yakin ingin menghapus semua data? Ini akan menghapus semua pemain dan skor!')) {
+                players = [];
+                currentRound = 1;
+                gameActive = false;
+                window.gameData = null;
+                
+                document.getElementById('setupSection').style.display = 'block';
+                document.getElementById('gameSection').style.display = 'none';
+                updatePlayerList();
+                
+                alert('Semua data telah dihapus!');
+            }
+        }
+
         // Event listener untuk Enter key pada input nama
         document.getElementById('playerNameInput').addEventListener('keypress', function(event) {
             if (event.key === 'Enter') {
                 addPlayer();
+            }
+        });
+
+        // Auto-save when page is about to unload
+        window.addEventListener('beforeunload', function() {
+            saveGameData();
+        });
+
+        // Handle page visibility change (when switching tabs/minimizing)
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                saveGameData();
+            } else {
+                loadGameData();
             }
         });
     </script>
