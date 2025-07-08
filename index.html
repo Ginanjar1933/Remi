@@ -486,27 +486,75 @@
         let currentRound = 1;
         let gameActive = false;
 
-        // Load data from memory when page loads
+        // Load data when page loads
         window.addEventListener('load', function() {
             loadGameData();
         });
 
-        // Save data to memory
+        // Save data using multiple methods for better persistence
         function saveGameData() {
             const gameData = {
                 players: players,
                 currentRound: currentRound,
-                gameActive: gameActive
+                gameActive: gameActive,
+                timestamp: Date.now()
             };
             
-            // Store in a global variable that persists during the session
+            // Method 1: Store in global variable
             window.gameData = gameData;
+            
+            // Method 2: Store in document as hidden element
+            let dataElement = document.getElementById('hiddenGameData');
+            if (!dataElement) {
+                dataElement = document.createElement('div');
+                dataElement.id = 'hiddenGameData';
+                dataElement.style.display = 'none';
+                document.body.appendChild(dataElement);
+            }
+            dataElement.textContent = JSON.stringify(gameData);
+            
+            // Method 3: Store in URL hash (for browser refresh persistence)
+            try {
+                const encodedData = btoa(JSON.stringify(gameData));
+                window.location.hash = encodedData;
+            } catch (e) {
+                console.log('Error encoding data');
+            }
         }
 
-        // Load data from memory
+        // Load data from multiple sources
         function loadGameData() {
-            if (window.gameData) {
-                const data = window.gameData;
+            let data = null;
+            
+            // Try URL hash first (survives refresh)
+            if (window.location.hash) {
+                try {
+                    const encodedData = window.location.hash.substring(1);
+                    data = JSON.parse(atob(encodedData));
+                } catch (e) {
+                    console.log('Error decoding hash data');
+                }
+            }
+            
+            // Fallback to global variable
+            if (!data && window.gameData) {
+                data = window.gameData;
+            }
+            
+            // Fallback to hidden element
+            if (!data) {
+                try {
+                    const dataElement = document.getElementById('hiddenGameData');
+                    if (dataElement && dataElement.textContent) {
+                        data = JSON.parse(dataElement.textContent);
+                    }
+                } catch (e) {
+                    console.log('Error loading from hidden element');
+                }
+            }
+            
+            // Apply loaded data
+            if (data && data.players) {
                 players = data.players || [];
                 currentRound = data.currentRound || 1;
                 gameActive = data.gameActive || false;
@@ -623,7 +671,7 @@
                 let historyHTML = '';
                 player.scoreHistory.forEach((score, round) => {
                     const scoreClass = score > 0 ? 'positive-score' : score < 0 ? 'negative-score' : '';
-                    const scoreText = score > 0 ? `+${score}` : score.toString();
+                    const scoreText = score > 0 ? `+${score}` : score < 0 ? `${score}` : score;
                     historyHTML += `
                         <div class="score-item">
                             <span class="round">R${round + 1}</span>
@@ -636,128 +684,4 @@
                     <h3>${player.name}</h3>
                     <div class="total-score">Total: ${player.totalScore}</div>
                     <div class="score-input">
-                        <input type="number" id="scoreInput${index}" placeholder="Masukkan skor..." onkeypress="handleEnterKey(event, ${index})">
-                    </div>
-                    <div class="score-buttons">
-                        <button class="score-btn score-btn-add" onclick="addScore(${index}, 'add')">+ Tambah Poin</button>
-                        <button class="score-btn score-btn-subtract" onclick="addScore(${index}, 'subtract')">- Kurangi Poin</button>
-                    </div>
-                    <div class="score-history">${historyHTML || '<p style="text-align: center; color: #666;">Belum ada skor</p>'}</div>
-                `;
-                
-                playersGrid.appendChild(playerCard);
-            });
-        }
-
-        function handleEnterKey(event, playerIndex) {
-            if (event.key === 'Enter') {
-                addScore(playerIndex, 'add');
-            }
-        }
-
-        function addScore(playerIndex, operation) {
-            const input = document.getElementById(`scoreInput${playerIndex}`);
-            let score = parseInt(input.value) || 0;
-            
-            if (input.value === '' || score === 0) {
-                alert('Silakan masukkan skor yang valid!');
-                return;
-            }
-            
-            // Jika operasi subtract, ubah skor menjadi negatif
-            if (operation === 'subtract') {
-                score = Math.abs(score) * -1;
-            } else {
-                score = Math.abs(score);
-            }
-            
-            players[playerIndex].scoreHistory.push(score);
-            players[playerIndex].totalScore += score;
-            
-            input.value = '';
-            updateGameDisplay();
-            checkWinner();
-            autoSave();
-        }
-
-        function checkWinner() {
-            const winner = players.reduce((prev, current) => 
-                prev.totalScore > current.totalScore ? prev : current
-            );
-            
-            if (winner.totalScore >= 100) {
-                const winnerAnnouncement = document.getElementById('winnerAnnouncement');
-                winnerAnnouncement.textContent = `🎉 Selamat ${winner.name}! Anda menang dengan skor ${winner.totalScore}!`;
-                winnerAnnouncement.style.display = 'block';
-                gameActive = false;
-                autoSave();
-            }
-        }
-
-        function nextRound() {
-            currentRound++;
-            updateGameDisplay();
-            autoSave();
-        }
-
-        function resetGame() {
-            if (confirm('Apakah Anda yakin ingin reset game? Semua skor akan hilang!')) {
-                players.forEach(player => {
-                    player.totalScore = 0;
-                    player.scoreHistory = [];
-                });
-                currentRound = 1;
-                gameActive = true;
-                document.getElementById('winnerAnnouncement').style.display = 'none';
-                updateGameDisplay();
-                autoSave();
-            }
-        }
-
-        function endGame() {
-            if (confirm('Apakah Anda yakin ingin mengakhiri game?')) {
-                document.getElementById('setupSection').style.display = 'block';
-                document.getElementById('gameSection').style.display = 'none';
-                resetGame();
-            }
-        }
-
-        // Clear all data function (optional)
-        function clearAllData() {
-            if (confirm('Apakah Anda yakin ingin menghapus semua data? Ini akan menghapus semua pemain dan skor!')) {
-                players = [];
-                currentRound = 1;
-                gameActive = false;
-                window.gameData = null;
-                
-                document.getElementById('setupSection').style.display = 'block';
-                document.getElementById('gameSection').style.display = 'none';
-                updatePlayerList();
-                
-                alert('Semua data telah dihapus!');
-            }
-        }
-
-        // Event listener untuk Enter key pada input nama
-        document.getElementById('playerNameInput').addEventListener('keypress', function(event) {
-            if (event.key === 'Enter') {
-                addPlayer();
-            }
-        });
-
-        // Auto-save when page is about to unload
-        window.addEventListener('beforeunload', function() {
-            saveGameData();
-        });
-
-        // Handle page visibility change (when switching tabs/minimizing)
-        document.addEventListener('visibilitychange', function() {
-            if (document.hidden) {
-                saveGameData();
-            } else {
-                loadGameData();
-            }
-        });
-    </script>
-</body>
-</html>
+                        <input type="number" 
